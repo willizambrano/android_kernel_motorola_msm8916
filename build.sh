@@ -17,17 +17,15 @@ export ARCH=arm
 export KBUILD_BUILD_USER="WilliamZambrano"
 export KBUILD_BUILD_HOST="AMDfx6300"
 
-make osprey_defconfig
+make harpia_defconfig
 make menuconfig
 echo -e "$yellow*****************************************************"
 echo "       Compilando Evolution_Kernel         "
 echo -e "*****************************************************$nocol"
 
 make -j6 zImage CONFIG_DEBUG_SECTION_MISMATCH=y CONFIG_NO_ERROR_ON_MISMATCH=y
-make -j6 dtimage CONFIG_DEBUG_SECTION_MISMATCH=y CONFIG_NO_ERROR_ON_MISMATCH=y
+make -j6 zImage-dtb CONFIG_DEBUG_SECTION_MISMATCH=y CONFIG_NO_ERROR_ON_MISMATCH=y
 make -j6 modules CONFIG_DEBUG_SECTION_MISMATCH=y CONFIG_NO_ERROR_ON_MISMATCH=y
-
-mkdir -p evolution_install
 make -j6 modules_install INSTALL_MOD_PATH=evolution_install INSTALL_MOD_STRIP=1
 
 BUILD_END=$(date +"%s")
