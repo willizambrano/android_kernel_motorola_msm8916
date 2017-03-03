@@ -1285,8 +1285,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 			ctrl_pdata->bl_on_defer(ctrl_pdata);
 		if (ctrl_pdata->on_cmds.link_state == DSI_HS_MODE)
 			rc = mdss_dsi_unblank(pdata);
-		pdata->panel_info.esd_rdy = true;
-		pdata->panel_info.cont_splash_esd_rdy = true;
+
 #ifdef CONFIG_STATE_NOTIFIER
 		state_notifier_call_chain(STATE_NOTIFIER_ACTIVE, NULL);
 #endif
