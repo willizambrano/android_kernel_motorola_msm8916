@@ -1,5 +1,5 @@
 #!/bin/bash
-# Compiler by WilliamZambrano_Powered_by_AMDfx6300
+# Compiler Powered_by_AMDfx6300
 #
 
 BUILD_START=$(date +"%s")
@@ -12,10 +12,10 @@ nocol='\033[0m'
 echo -e "Borrando basura"
 make clean && make mrproper
 
-export CROSS_COMPILE=/home/william/cortex_a7_linaro4.9/bin/arm-cortex_a7-linux-gnueabihf-
+export CROSS_COMPILE=/home/william/linaro4.9/bin/arm-eabi-
 export ARCH=arm
-export KBUILD_BUILD_USER="HappyChristmas"
-export KBUILD_BUILD_HOST="WilliamZambrano"
+export KBUILD_BUILD_USER="WilliamZambrano"
+export KBUILD_BUILD_HOST="AMDfx6300"
 
 make osprey_defconfig
 make menuconfig
@@ -24,8 +24,6 @@ echo "       Compilando Evolution_Kernel         "
 echo -e "*****************************************************$nocol"
 
 make -o3 -j6 CONFIG_DEBUG_SECTION_MISMATCH=y CONFIG_NO_ERROR_ON_MISMATCH=y
-make -j5 dtbs
-make j5 modules
 
 BUILD_END=$(date +"%s")
 DIFF=$(($BUILD_END - $BUILD_START))
