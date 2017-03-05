@@ -1087,7 +1087,7 @@ static void fan5404x_notify_vbat(enum qpnp_tm_state state, void *ctx)
 {
 	struct fan5404x_chg *chip = ctx;
 	struct qpnp_vadc_result result;
-	int batt_volt;
+	int batt_volt = 0;
 	int rc;
 	int adc_volt = 0;
 
@@ -1239,7 +1239,7 @@ static void fan5404x_set_chrg_path_temp(struct fan5404x_chg *chip)
 
 static int fan5404x_check_temp_range(struct fan5404x_chg *chip)
 {
-	int batt_volt;
+	int batt_volt = 0;
 	int batt_soc;
 	int ext_high_temp = 0;
 

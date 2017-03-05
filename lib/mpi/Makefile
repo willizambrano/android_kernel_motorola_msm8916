@@ -2,8 +2,6 @@
 # MPI multiprecision maths library (from gpg)
 #
 
-ccflags-y := -fgnu89-inline
-
 obj-$(CONFIG_MPILIB) = mpi.o
 
 mpi-y = \

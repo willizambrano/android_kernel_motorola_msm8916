@@ -66,6 +66,7 @@ enum cabc_mode {
 
 enum panel_param_id {
 	PARAM_HBM_ID = 0,
+	PARAM_SRE_ID,
 	PARAM_CABC_ID,
 	PARAM_ID_NUM
 };
@@ -234,8 +235,6 @@ struct mdss_intf_recovery {
  * @MDSS_EVENT_ENABLE_TE: Change TE state, used for factory testing only
  * @MDSS_EVENT_REGISTER_RECOVERY_HANDLER: Event to recover the interface in
  *					case there was any errors detected.
- * @MDSS_EVENT_INTF_RESTORE: Event to restore the interface in case there
- *				was any errors detected during normal operation.
  */
 enum mdss_intf_events {
 	MDSS_EVENT_RESET = 1,
@@ -259,7 +258,6 @@ enum mdss_intf_events {
 	MDSS_EVENT_DSI_DYNAMIC_SWITCH,
 	MDSS_EVENT_REGISTER_RECOVERY_HANDLER,
 	MDSS_EVENT_ENABLE_TE,
-	MDSS_EVENT_INTF_RESTORE,
 };
 
 struct lcd_panel_info {
@@ -339,7 +337,7 @@ struct mipi_panel_info {
 	/* The packet-size should not bet changed */
 	char no_max_pkt_size;
 	/* Clock required during LP commands */
-	char force_clk_lane_hs;
+	bool force_clk_lane_hs;
 
 	char vsync_enable;
 	char hw_vsync_mode;
@@ -421,6 +419,7 @@ struct mdss_panel_info {
 	u32 clk_rate;
 	u32 clk_min;
 	u32 clk_max;
+	u32 mdp_transfer_time_us;
 	u32 frame_count;
 	u32 is_3d_panel;
 	u32 out_format;

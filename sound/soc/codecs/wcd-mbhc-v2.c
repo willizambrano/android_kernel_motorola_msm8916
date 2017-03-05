@@ -711,8 +711,8 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 		    jack_type == SND_JACK_LINEOUT) &&
 		    (mbhc->hph_status && mbhc->hph_status != jack_type)) {
 
-		if (mbhc->micbias_enable)
-			mbhc->micbias_enable = false;
+			if (mbhc->micbias_enable)
+				mbhc->micbias_enable = false;
 
 			mbhc->zl = mbhc->zr = 0;
 			pr_debug("%s: Reporting removal (%x)\n",
@@ -1950,7 +1950,7 @@ int wcd_mbhc_start(struct wcd_mbhc *mbhc,
 			schedule_delayed_work(&mbhc->mbhc_firmware_dwork,
 				      usecs_to_jiffies(FW_READ_TIMEOUT));
 		else
-			pr_err("%s: Skipping to read mbhc fw, 0x%p %p\n",
+			pr_err("%s: Skipping to read mbhc fw, 0x%pK %pK\n",
 				 __func__, mbhc->mbhc_fw, mbhc->mbhc_cal);
 	}
 	pr_debug("%s: leave %d\n", __func__, rc);
@@ -2051,35 +2051,30 @@ int wcd_mbhc_init(struct wcd_mbhc *mbhc, struct snd_soc_codec *codec,
 				__func__);
 			return ret;
 		}
-
-#ifndef CONFIG_SND_SOC_FSA8500
 		ret = snd_jack_set_key(mbhc->button_jack.jack,
 				       SND_JACK_BTN_1,
 				       KEY_VOICECOMMAND);
 		if (ret) {
-			pr_err("%s: Failed to set code for btn-1\n",
-			__func__);
+			pr_err("%s: Failed to set code for btn-1:%d\n",
+					__func__, ret);
 			return ret;
 		}
-
 		ret = snd_jack_set_key(mbhc->button_jack.jack,
 				       SND_JACK_BTN_2,
 				       KEY_VOLUMEUP);
 		if (ret) {
-			pr_err("%s: Failed to set code for btn-4\n",
-			__func__);
+			pr_err("%s: Failed to set code for btn-2:%d\n",
+				__func__, ret);
 			return ret;
 		}
-
 		ret = snd_jack_set_key(mbhc->button_jack.jack,
 				       SND_JACK_BTN_3,
 				       KEY_VOLUMEDOWN);
 		if (ret) {
-			pr_err("%s: Failed to set code for btn-4\n",
-			__func__);
+			pr_err("%s: Failed to set code for btn-3:%d\n",
+				__func__, ret);
 			return ret;
 		}
-#endif
 
 		INIT_DELAYED_WORK(&mbhc->mbhc_firmware_dwork,
 				  wcd_mbhc_fw_read);

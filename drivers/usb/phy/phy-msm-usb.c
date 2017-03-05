@@ -80,6 +80,7 @@
 #define ID_GND_THRESH           300000  /* 300 mV */
 #define ID_VOLTS_DEFAULT        1000000  /* 1000 mV */
 #define MAX_CHGR_RETRY_COUNT    3
+#define USB_DEFAULT_SYSTEM_CLOCK 80000000	/* 80 MHz */
 
 #define USB_DEFAULT_SYSTEM_CLOCK 80000000	/* 80 MHz */
 

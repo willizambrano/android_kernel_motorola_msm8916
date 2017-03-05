@@ -247,7 +247,7 @@ struct synaptics_dsx_func_patch {
 struct synaptics_dsx_patch {
 	const char *name;
 	int	cfg_num;
-	struct semaphore list_sema;
+	struct mutex list_mutex;
 	struct list_head cfg_head;
 };
 

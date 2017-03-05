@@ -17,7 +17,7 @@
 			compatible = "qcom,spm-regulator";
 			regulator-name = "8916_s2";
 			reg = <0x1700 0x100>;
-			regulator-min-microvolt = <1050000>;
+			regulator-min-microvolt = <1000000>;
 			regulator-max-microvolt = <1350000>;
 		};
 	};
@@ -28,16 +28,18 @@
 &soc {
 	mem_acc_vreg_corner: regulator@1946000 {
 		compatible = "qcom,mem-acc-regulator";
-		reg = <0x1946000 0x4>, <0x1946000 0x4>, <0x58000 0x1000>;
-		reg-names = "acc-sel-l1", "acc-sel-l2", "efuse_addr";
+		reg = <0x1946000 0x4>, <0x58000 0x1000>;
+		reg-names = "acc-sel-l1", "efuse_addr";
 		regulator-name = "mem_acc_corner";
 		regulator-min-microvolt = <1>;
 		regulator-max-microvolt = <3>;
 
 		qcom,acc-sel-l1-bit-pos = <0>;
-		qcom,acc-sel-l2-bit-pos = <8>;
-		qcom,corner-acc-map = <0 1 1>;
-		qcom,l1-config-skip-fuse-sel = <0 52 1 1 0>;
+		qcom,acc-sel-l1-bit-size = <9>;
+		qcom,corner-acc-map = <0x0 0x100 0x101>;
+
+		qcom,override-acc-fuse-sel = <0 52 1 1 0>;
+		qcom,override-corner-acc-map = <0x0 0x100 0x100>;
 	};
 
 	apc_vreg_corner: regulator@b018000 {
@@ -50,8 +52,8 @@
 		regulator-min-microvolt = <1>;
 		regulator-max-microvolt = <9>;
 
-		qcom,cpr-voltage-ceiling = <1050000 1150000 1350000>;
-		qcom,cpr-voltage-floor = <1050000 1050000 1162500>;
+		qcom,cpr-voltage-ceiling = <1050000 1150000 1300000>;
+		qcom,cpr-voltage-floor = <1000000 1000000 1100000>;
 		vdd-apc-supply = <&pm8916_s2>;
 
 		qcom,vdd-mx-corner-map = <4 5 7>;
@@ -83,7 +85,7 @@
 					<27 36 6 0>,
 					<27 18 6 0>,
 					<27 0 6 0>;
-		qcom,cpr-init-voltage-ref = <1050000 1150000 1350000>;
+		qcom,cpr-init-voltage-ref = <1050000 1120000 1300000>;
 		qcom,cpr-init-voltage-step = <10000>;
 		qcom,cpr-corner-map = <1 1 2 2 3 3 3 3 3>;
 		qcom,cpr-corner-frequency-map =

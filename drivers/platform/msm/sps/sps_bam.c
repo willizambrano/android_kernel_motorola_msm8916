@@ -284,16 +284,14 @@ int sps_bam_enable(struct sps_bam *dev)
 			if (dev->props.options & SPS_BAM_RES_CONFIRM) {
 				result = request_irq(dev->props.irq,
 					(irq_handler_t) bam_isr,
-					IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
-					"sps", dev);
+					IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND, "sps", dev);
 				SPS_DBG(
 					"sps:BAM %pa uses edge for IRQ# %d\n",
 					BAM_ID(dev), dev->props.irq);
 			} else {
 				result = request_irq(dev->props.irq,
 					(irq_handler_t) bam_isr,
-					IRQF_TRIGGER_HIGH | IRQF_NO_SUSPEND,
-					"sps", dev);
+					IRQF_TRIGGER_HIGH | IRQF_NO_SUSPEND, "sps", dev);
 				SPS_DBG(
 					"sps:BAM %pa uses level for IRQ# %d\n",
 					BAM_ID(dev), dev->props.irq);
@@ -1108,13 +1106,9 @@ static void pipe_set_irq(struct sps_bam *dev, u32 pipe_index,
 			SPS_DBG2("sps:BAM %pa pipe %d forced to use polling\n",
 				 BAM_ID(dev), pipe_index);
 	}
-	if ((pipe->state & BAM_STATE_MTI) == 0) {
-		bam_pipe_get_and_clear_irq_status(dev->base,
-						   pipe_index);
-
+	if ((pipe->state & BAM_STATE_MTI) == 0)
 		bam_pipe_set_irq(dev->base, pipe_index, irq_enable,
 					 pipe->irq_mask, dev->props.ee);
-	}
 	else
 		bam_pipe_set_mti(dev->base, pipe_index, irq_enable,
 					 pipe->irq_mask, pipe->irq_gen_addr);
@@ -1459,8 +1453,8 @@ int sps_bam_pipe_transfer(struct sps_bam *dev,
 			 u32 pipe_index, struct sps_transfer *transfer)
 {
 	struct sps_iovec *iovec;
-	u32 count;
-	u32 flags;
+	u32 count = 0;
+	u32 flags = 0;
 	void *user;
 	int n;
 	int result;

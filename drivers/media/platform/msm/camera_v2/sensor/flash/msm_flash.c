@@ -239,6 +239,16 @@ static int32_t msm_flash_i2c_init(
 	flash_ctrl->power_info.power_down_setting_size =
 		flash_ctrl->power_setting_array.size_down;
 
+	if ((flash_ctrl->power_info.power_setting_size > MAX_POWER_CONFIG) ||
+	(flash_ctrl->power_info.power_down_setting_size > MAX_POWER_CONFIG)) {
+		pr_err("%s:%d invalid power setting size=%d size_down=%d\n",
+			__func__, __LINE__,
+			flash_ctrl->power_info.power_setting_size,
+			flash_ctrl->power_info.power_down_setting_size);
+		rc = -EINVAL;
+		goto msm_flash_i2c_init_fail;
+	}
+
 	rc = msm_camera_power_up(&flash_ctrl->power_info,
 		flash_ctrl->flash_device_type,
 		&flash_ctrl->flash_i2c_client);
@@ -299,10 +309,15 @@ static int32_t msm_flash_gpio_init(
 			if (i < flash_ctrl->flash_num_sources)
 				flash_ctrl->torch_trigger[i] =
 					flash_ctrl->flash_trigger[i];
-			else
-				flash_ctrl->torch_trigger[i] =
-					flash_ctrl->flash_trigger[
-					flash_ctrl->flash_num_sources - 1];
+			else {
+				// hack I don't fully understand to get rid of array index warning
+				struct led_trigger *temp;
+				int index = (int)flash_ctrl->flash_num_sources - 1;
+				if (index > MAX_LED_TRIGGERS) index = MAX_LED_TRIGGERS - 1;
+				if (index < 0) index = 0;
+				temp = flash_ctrl->flash_trigger[index];
+				flash_ctrl->torch_trigger[i] = temp;
+			}
 		}
 	}
 
@@ -580,6 +595,8 @@ static long msm_flash_subdev_ioctl(struct v4l2_subdev *sd,
 		return msm_flash_get_subdev_id(fctrl, argp);
 	case VIDIOC_MSM_FLASH_CFG:
 		return msm_flash_config(fctrl, argp);
+	case MSM_SD_NOTIFY_FREEZE:
+		return 0;
 	case MSM_SD_SHUTDOWN:
 		*(int *)argp = MSM_CAMERA_LED_RELEASE;
 		return msm_flash_config(fctrl, argp);

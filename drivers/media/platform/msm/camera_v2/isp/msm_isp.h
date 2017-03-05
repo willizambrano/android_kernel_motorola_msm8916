@@ -52,8 +52,8 @@
 #define VFE_CLK_INFO_MAX 16
 #define STATS_COMP_BIT_MASK 0xFF0000
 
-#define MSM_ISP_MIN_AB 300000000
-#define MSM_ISP_MIN_IB 450000000
+#define MSM_ISP_MIN_AB 100000000
+#define MSM_ISP_MIN_IB 120000000
 
 struct vfe_device;
 struct msm_vfe_axi_stream;
@@ -305,7 +305,6 @@ struct msm_vfe_axi_stream {
 	uint32_t request_frm_num;
 	uint8_t buf_divert;
 	enum msm_vfe_axi_stream_type stream_type;
-	uint32_t vt_enable;
 	uint32_t frame_based;
 	enum msm_vfe_frame_skip_pattern frame_skip_pattern;
 	uint32_t framedrop_period;
@@ -587,6 +586,7 @@ struct vfe_device {
 	uint64_t msm_isp_vfe_clk_rate;
 	struct msm_isp_ub_info *ub_info;
 	uint32_t vfe_ub_policy;
+	uint32_t isp_sof_debug;
 	uint8_t reset_pending;
 };
 

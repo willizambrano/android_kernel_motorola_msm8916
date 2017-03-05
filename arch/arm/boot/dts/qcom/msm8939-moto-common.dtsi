@@ -75,7 +75,8 @@
 			46350 //499200 kHz
 			67860 //800000 kHz
 			107770 //998400 kHz
-			140020>; //1113600 kHz
+			140020 //1113600 kHz
+			160020>; //1209600 KHz
 		};
 		CPU5: cpu@1 {
 			current = < 22610 //200000 kHz
@@ -83,7 +84,8 @@
 			46350 //499200 kHz
 			67860 //800000 kHz
 			107770 //998400 kHz
-			140020>; //1113600 kHz
+			140020 //1113600 kHz
+			160020>; //1209600 KHz
 		};
 		CPU6: cpu@2 {
 			current = < 22610 //200000 kHz
@@ -91,7 +93,8 @@
 			46350 //499200 kHz
 			67860 //800000 kHz
 			107770 //998400 kHz
-			140020>; //1113600 kHz
+			140020 //1113600 kHz
+			160020>; //1209600 KHz
 		};
 		CPU7: cpu@3 {
 			current = < 22610 //200000 kHz
@@ -99,7 +102,8 @@
 			46350 //499200 kHz
 			67860 //800000 kHz
 			107770 //998400 kHz
-			140020>; //1113600 kHz
+			140020 //1113600 kHz
+			160020>; //1209600 KHz
 		};
 	};
 
@@ -729,6 +733,7 @@
 		gpios = <&msm_gpio 21 0>, /* IRQ */
 			<&msm_gpio 20 0>; /* RESET */
 		synaptics,gpio-config;
+		synaptics,charger-detection;
 		synaptics,touch-clip-area = <64 0 1015 1014>;
 		synaptics,use-in-progress-event-blank;
 		pinctrl-names = "default", "active";
@@ -745,7 +750,7 @@
 			patch-data = "F12@20:1=2;F1@0=1&7";
 		};
 		alternate_active_lgd: touchstate_folio_active {
-			patch-data = "F54@2=B400;F12@10=1E1F;F54M@0=4";
+			patch-data = "";
 		};
 		alternate_suspended_lgd: touchstate_folio_suspended {
 			patch-data = "F12@20:1=2;F1@0=1&7";

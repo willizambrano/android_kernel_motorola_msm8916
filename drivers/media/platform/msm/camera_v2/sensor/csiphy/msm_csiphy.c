@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -123,7 +123,7 @@ static int msm_csiphy_lane_config(struct csiphy_device *csiphy_dev,
 			val |= csiphy_params->csid_core;
 		}
 		msm_camera_io_w(val, csiphy_dev->clk_mux_base);
-		CDBG("%s clk mux addr %pK val 0x%x\n", __func__,
+		CDBG("%s clk mux addr %p val 0x%x\n", __func__,
 			csiphy_dev->clk_mux_base, val);
 		mb();
 	}
@@ -246,7 +246,7 @@ static irqreturn_t msm_csiphy_irq(int irq_num, void *data)
 			csiphy_dev->base +
 			csiphy_dev->ctrl_reg->csiphy_reg.
 			mipi_csiphy_interrupt_clear0_addr + 0x4*i);
-		pr_err("%s MIPI_CSIPHY%d_INTERRUPT_STATUS%d = 0x%x\n",
+		CDBG("%s MIPI_CSIPHY%d_INTERRUPT_STATUS%d = 0x%x\n",
 			 __func__, csiphy_dev->pdev->id, i, irq);
 		msm_camera_io_w(0x1, csiphy_dev->base +
 			csiphy_dev->ctrl_reg->
@@ -322,7 +322,7 @@ static int msm_csiphy_init(struct csiphy_device *csiphy_dev)
 			csiphy_dev->num_clk, 1);
 	} else if (csiphy_dev->hw_dts_version >= CSIPHY_VERSION_V30) {
 		if (!csiphy_dev->clk_mux_mem || !csiphy_dev->clk_mux_io) {
-			pr_err("%s clk mux mem %pK io %pK\n", __func__,
+			pr_err("%s clk mux mem %p io %p\n", __func__,
 				csiphy_dev->clk_mux_mem,
 				csiphy_dev->clk_mux_io);
 			rc = -ENOMEM;
@@ -418,7 +418,7 @@ static int msm_csiphy_init(struct csiphy_device *csiphy_dev)
 			csiphy_dev->num_clk, 1);
 	} else if (csiphy_dev->hw_dts_version >= CSIPHY_VERSION_V30) {
 		if (!csiphy_dev->clk_mux_mem || !csiphy_dev->clk_mux_io) {
-			pr_err("%s clk mux mem %pK io %pK\n", __func__,
+			pr_err("%s clk mux mem %p io %p\n", __func__,
 				csiphy_dev->clk_mux_mem,
 				csiphy_dev->clk_mux_io);
 			rc = -ENOMEM;
@@ -465,6 +465,7 @@ static int msm_csiphy_init(struct csiphy_device *csiphy_dev)
 	else
 		csiphy_dev->hw_version = csiphy_dev->hw_dts_version;
 
+	csiphy_dev->csiphy_sof_freeze = 0;
 	CDBG("%s:%d called csiphy_dev->hw_version 0x%x\n", __func__, __LINE__,
 		csiphy_dev->hw_version);
 	csiphy_dev->csiphy_state = CSIPHY_POWER_UP;
@@ -499,7 +500,7 @@ static int msm_csiphy_release(struct csiphy_device *csiphy_dev, void *arg)
 				mipi_csiphy_lnn_cfg2_addr + 0x40*i);
 	} else {
 		if (!csi_lane_params) {
-			pr_err("%s:%d failed: csi_lane_params %pK\n", __func__,
+			pr_err("%s:%d failed: csi_lane_params %p\n", __func__,
 				__LINE__, csi_lane_params);
 			return -EINVAL;
 		}
@@ -592,7 +593,7 @@ static int msm_csiphy_release(struct csiphy_device *csiphy_dev, void *arg)
 				mipi_csiphy_lnn_cfg2_addr + 0x40*i);
 	} else {
 		if (!csi_lane_params) {
-			pr_err("%s:%d failed: csi_lane_params %pK\n", __func__,
+			pr_err("%s:%d failed: csi_lane_params %p\n", __func__,
 				__LINE__, csi_lane_params);
 			return -EINVAL;
 		}
@@ -641,6 +642,9 @@ static int msm_csiphy_release(struct csiphy_device *csiphy_dev, void *arg)
 	msm_camera_io_w(0x0, csiphy_dev->base +
 		csiphy_dev->ctrl_reg->csiphy_reg.mipi_csiphy_glbl_pwr_cfg_addr);
 
+	if (csiphy_dev->csiphy_sof_freeze == 1)
+		disable_irq(csiphy_dev->irq->start);
+
 	if (csiphy_dev->hw_dts_version <= CSIPHY_VERSION_V22) {
 		msm_cam_clk_enable(&csiphy_dev->pdev->dev,
 			csiphy_clk_info, csiphy_dev->csiphy_clk,
@@ -681,6 +685,7 @@ static int32_t msm_csiphy_cmd(struct csiphy_device *csiphy_dev, void *arg)
 			rc = -EFAULT;
 			break;
 		}
+		csiphy_dev->csiphy_sof_freeze = 0;
 		rc = msm_csiphy_lane_config(csiphy_dev, &csiphy_params);
 		break;
 	case CSIPHY_RELEASE:
@@ -732,6 +737,14 @@ static long msm_csiphy_subdev_ioctl(struct v4l2_subdev *sd,
 	case MSM_SD_SHUTDOWN:
 		rc = msm_csiphy_release(csiphy_dev, arg);
 		break;
+	case MSM_SD_NOTIFY_FREEZE: {
+		if (!csiphy_dev || !csiphy_dev->ctrl_reg ||
+				!csiphy_dev->ref_count)
+			break;
+		csiphy_dev->csiphy_sof_freeze = 1;
+		enable_irq(csiphy_dev->irq->start);
+		break;
+	   }
 	default:
 		pr_err_ratelimited("%s: command not found\n", __func__);
 	}

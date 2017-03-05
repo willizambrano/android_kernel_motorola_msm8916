@@ -46,7 +46,7 @@ static int mmc_prep_request(struct request_queue *q, struct request *req)
 		return BLKPREP_KILL;
 	}
 
-	if (mq && mmc_card_removed(mq->card))
+	if (mq && (mmc_card_removed(mq->card) || mmc_access_rpmb(mq)))
 		return BLKPREP_KILL;
 
 	req->cmd_flags |= REQ_DONTPREP;
@@ -60,10 +60,10 @@ static int mmc_queue_thread(void *d)
 	struct request_queue *q = mq->queue;
 	struct mmc_card *card = mq->card;
 
-        struct sched_param scheduler_params = {0};
-        scheduler_params.sched_priority = 1;
+	struct sched_param scheduler_params = {0};
+	scheduler_params.sched_priority = 1;
 
-        sched_setscheduler(current, SCHED_FIFO, &scheduler_params);
+	sched_setscheduler(current, SCHED_FIFO, &scheduler_params);
 
 	current->flags |= PF_MEMALLOC;
 
