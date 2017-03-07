@@ -105,6 +105,7 @@
 		mdss_fb1: qcom,mdss_fb_wfd {
 			cell-index = <1>;
 			compatible = "qcom,mdss-fb";
+			qcom,mdss-fb-splash-logo-enabled;
 		};
 	};
 
