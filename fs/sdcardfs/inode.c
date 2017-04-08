@@ -20,12 +20,14 @@
 
 #include "sdcardfs.h"
 #include <linux/fs_struct.h>
+#include <linux/ratelimit.h>
 
 /* Do not directly use this function. Use OVERRIDE_CRED() instead. */
 const struct cred * override_fsids(struct sdcardfs_sb_info* sbi)
 {
 	struct cred * cred;
 	const struct cred * old_cred;
+	uid_t uid;
 
 	cred = prepare_creds();
 	if (!cred)
@@ -40,9 +42,9 @@ const struct cred * override_fsids(struct sdcardfs_sb_info* sbi)
 }
 
 /* Do not directly use this function, use REVERT_CRED() instead. */
-void revert_fsids(const struct cred * old_cred)
+void revert_fsids(const struct cred *old_cred)
 {
-	const struct cred * cur_cred;
+	const struct cred *cur_cred;
 
 	cur_cred = current->cred;
 	revert_creds(old_cred);
@@ -230,14 +232,15 @@ out:
 }
 #endif
 
-static int touch(char *abs_path, mode_t mode) {
+static int touch(char *abs_path, mode_t mode)
+{
 	struct file *filp = filp_open(abs_path, O_RDWR|O_CREAT|O_EXCL|O_NOFOLLOW, mode);
+
 	if (IS_ERR(filp)) {
 		if (PTR_ERR(filp) == -EEXIST) {
 			return 0;
-		}
-		else {
-			printk(KERN_ERR "sdcardfs: failed to open(%s): %ld\n",
+		} else {
+			pr_err("sdcardfs: failed to open(%s): %ld\n",
 						abs_path, PTR_ERR(filp));
 			return PTR_ERR(filp);
 		}
@@ -273,7 +276,7 @@ static int sdcardfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode
 
 	/* check disk space */
 	if (!check_min_free_space(dentry, 0, 1)) {
-		printk(KERN_INFO "sdcardfs: No minimum free space.\n");
+		pr_err("sdcardfs: No minimum free space.\n");
 		err = -ENOSPC;
 		goto out_revert;
 	}
@@ -297,19 +300,21 @@ static int sdcardfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode
 		goto out;
 
 	/* if it is a local obb dentry, setup it with the base obbpath */
-	if(need_graft_path(dentry)) {
+	if (need_graft_path(dentry)) {
 
 		err = setup_obb_dentry(dentry, &lower_path);
-		if(err) {
+		if (err) {
 			/* if the sbi->obbpath is not available, the lower_path won't be
 			 * changed by setup_obb_dentry() but the lower path is saved to
 			 * its orig_path. this dentry will be revalidated later.
-			 * but now, the lower_path should be NULL */
+			 * but now, the lower_path should be NULL
+			 */
 			sdcardfs_put_reset_lower_path(dentry);
 
 			/* the newly created lower path which saved to its orig_path or
 			 * the lower_path is the base obbpath.
-			 * therefore, an additional path_get is required */
+			 * therefore, an additional path_get is required
+			 */
 			path_get(&lower_path);
 		} else
 			make_nomedia_in_obb = 1;
@@ -334,7 +339,7 @@ static int sdcardfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode
 		set_fs_pwd(current->fs, &lower_path);
 		touch_err = touch(".nomedia", 0664);
 		if (touch_err) {
-			printk(KERN_ERR "sdcardfs: failed to create .nomedia in %s: %d\n",
+			pr_err("sdcardfs: failed to create .nomedia in %s: %d\n",
 							lower_path.dentry->d_name.name, touch_err);
 			goto out;
 		}
@@ -370,7 +375,8 @@ static int sdcardfs_rmdir(struct inode *dir, struct dentry *dentry)
 	OVERRIDE_CRED(SDCARDFS_SB(dir->i_sb), saved_cred);
 
 	/* sdcardfs_get_real_lower(): in case of remove an user's obb dentry
-	 * the dentry on the original path should be deleted. */
+	 * the dentry on the original path should be deleted.
+	 */
 	sdcardfs_get_real_lower(dentry, &lower_path);
 
 	lower_dentry = lower_path.dentry;
@@ -505,6 +511,9 @@ static int sdcardfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	get_derived_permission_new(new_dentry->d_parent, old_dentry, new_dentry);
 	fix_derived_permission(old_dentry->d_inode);
 	fixup_top_recursive(old_dentry);
+	fixup_tmp_permissions(old_dentry->d_inode);
+	fixup_lower_ownership(old_dentry, new_dentry->d_name.name);
+	d_invalidate(old_dentry); /* Can't fixup ownership recursively :( */
 out:
 	unlock_rename(lower_old_dir_dentry, lower_new_dir_dentry);
 	dput(lower_old_dir_dentry);
@@ -588,6 +597,31 @@ static void sdcardfs_put_link(struct dentry *dentry, struct nameidata *nd,
 
 static int sdcardfs_permission(struct inode *inode, int mask)
 {
+	WARN_RATELIMIT(1, "sdcardfs does not support permission. Use permission2.\n");
+	return -EINVAL;
+}
+
+void copy_attrs(struct inode *dest, const struct inode *src)
+{
+	dest->i_mode = src->i_mode;
+	dest->i_uid = src->i_uid;
+	dest->i_gid = src->i_gid;
+	dest->i_rdev = src->i_rdev;
+	dest->i_atime = src->i_atime;
+	dest->i_mtime = src->i_mtime;
+	dest->i_ctime = src->i_ctime;
+	dest->i_blkbits = src->i_blkbits;
+	dest->i_flags = src->i_flags;
+#ifdef CONFIG_FS_POSIX_ACL
+	dest->i_acl = src->i_acl;
+#endif
+#ifdef CONFIG_SECURITY
+	dest->i_security = src->i_security;
+#endif
+}
+
+static int sdcardfs_permission(struct vfsmount *mnt, struct inode *inode, int mask)
+{
 	int err;
 	struct inode *top = SDCARDFS_I(inode)->top;
 
@@ -603,6 +637,15 @@ static int sdcardfs_permission(struct inode *inode, int mask)
 	 */
 	err = generic_permission(inode, mask);
 
+	copy_attrs(&tmp, inode);
+	tmp.i_uid = make_kuid(&init_user_ns, SDCARDFS_I(top)->d_uid);
+	tmp.i_gid = make_kgid(&init_user_ns, get_gid(mnt, SDCARDFS_I(top)));
+	tmp.i_mode = (inode->i_mode & S_IFMT) | get_mode(mnt, SDCARDFS_I(top));
+	release_top(SDCARDFS_I(inode));
+	tmp.i_sb = inode->i_sb;
+	if (IS_POSIXACL(inode))
+		pr_warn("%s: This may be undefined behavior...\n", __func__);
+	err = generic_permission(&tmp, mask);
 	/* XXX
 	 * Original sdcardfs code calls inode_permission(lower_inode,.. )
 	 * for checking inode permission. But doing such things here seems
@@ -619,6 +662,7 @@ static int sdcardfs_permission(struct inode *inode, int mask)
 		 * we check it with AID_MEDIA_RW permission
 		 */
 		struct inode *lower_inode;
+
 		OVERRIDE_CRED(SDCARDFS_SB(inode->sb));
 
 		lower_inode = sdcardfs_lower_inode(inode);
@@ -647,6 +691,8 @@ static void sdcardfs_fillattr(struct inode *inode, struct kstat *stat)
 	stat->ctime = inode->i_ctime;
 	stat->blksize = (1 << inode->i_blkbits);
 	stat->blocks = inode->i_blocks;
+	WARN_RATELIMIT(1, "sdcardfs does not support setattr. User setattr2.\n");
+	return -EINVAL;
 }
 
 static int sdcardfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
@@ -701,6 +747,13 @@ static int sdcardfs_setattr(struct dentry *dentry, struct iattr *ia)
 	 * calling notify_change on the lower inode.
 	 */
 	err = inode_change_ok(inode, ia);
+	/* prepare our own lower struct iattr (with the lower file) */
+	memcpy(&lower_ia, ia, sizeof(lower_ia));
+	/* Allow touch updating timestamps. A previous permission check ensures
+	 * we have write access. Changes to mode, owner, and group are ignored
+	 */
+	ia->ia_valid |= ATTR_FORCE;
+	err = inode_change_ok(&tmp, ia);
 
 	/* no vfs_XXX operations required, cred overriding will be skipped. wj*/
 	if (!err) {
@@ -711,7 +764,6 @@ static int sdcardfs_setattr(struct dentry *dentry, struct iattr *ia)
 							 "  dentry: %s, task:%s\n",
 							 __func__, dentry->d_name.name, current->comm);
 			err = -EACCES;
-		}
 		dput(parent);
 	}
 
@@ -782,6 +834,60 @@ static int sdcardfs_setattr(struct dentry *dentry, struct iattr *ia)
 out:
 	sdcardfs_put_lower_path(dentry, &lower_path);
 out_err:
+	return err;
+}
+
+static int sdcardfs_fillattr(struct vfsmount *mnt,
+				struct inode *inode, struct kstat *stat)
+{
+	struct sdcardfs_inode_info *info = SDCARDFS_I(inode);
+	struct inode *top = grab_top(info);
+
+	if (!top)
+		return -EINVAL;
+
+	stat->dev = inode->i_sb->s_dev;
+	stat->ino = inode->i_ino;
+	stat->mode = (inode->i_mode  & S_IFMT) | get_mode(mnt, SDCARDFS_I(top));
+	stat->nlink = inode->i_nlink;
+	stat->uid = make_kuid(&init_user_ns, SDCARDFS_I(top)->d_uid);
+	stat->gid = make_kgid(&init_user_ns, get_gid(mnt, SDCARDFS_I(top)));
+	stat->rdev = inode->i_rdev;
+	stat->size = i_size_read(inode);
+	stat->atime = inode->i_atime;
+	stat->mtime = inode->i_mtime;
+	stat->ctime = inode->i_ctime;
+	stat->blksize = (1 << inode->i_blkbits);
+	stat->blocks = inode->i_blocks;
+	release_top(info);
+	return 0;
+}
+
+static int sdcardfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
+		 struct kstat *stat)
+{
+	struct kstat lower_stat;
+	struct path lower_path;
+	struct dentry *parent;
+	int err;
+
+	parent = dget_parent(dentry);
+	if (!check_caller_access_to_name(parent->d_inode, &dentry->d_name)) {
+		dput(parent);
+		return -EACCES;
+	}
+	dput(parent);
+
+	sdcardfs_get_lower_path(dentry, &lower_path);
+	err = vfs_getattr(&lower_path, &lower_stat);
+	if (err)
+		goto out;
+	sdcardfs_copy_and_fix_attrs(dentry->d_inode,
+			      lower_path.dentry->d_inode);
+	err = sdcardfs_fillattr(mnt, dentry->d_inode, stat);
+	stat->blocks = lower_stat.blocks;
+out:
+	sdcardfs_put_lower_path(dentry, &lower_path);
 	return err;
 }
 

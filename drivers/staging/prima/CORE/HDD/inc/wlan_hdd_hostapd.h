@@ -88,7 +88,7 @@ int hdd_softap_unpackIE( tHalHandle halHandle,
                 u_int8_t *gen_ie );
 
 VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCallback);
-VOS_STATUS hdd_init_ap_mode( hdd_adapter_t *pAdapter );
+VOS_STATUS hdd_init_ap_mode(hdd_adapter_t *pAdapter, bool re_init);
 void hdd_set_ap_ops( struct net_device *pWlanHostapdDev );
 int hdd_hostapd_stop (struct net_device *dev);
 void hdd_restart_softap (hdd_context_t *pHddCtx, hdd_adapter_t *pAdapter);
@@ -96,4 +96,8 @@ void hdd_restart_softap (hdd_context_t *pHddCtx, hdd_adapter_t *pAdapter);
 void hdd_hostapd_ch_avoid_cb(void *pAdapter, void *indParam);
 #endif /* FEATURE_WLAN_CH_AVOID */
 int hdd_del_all_sta(hdd_adapter_t *pAdapter);
+
+void hdd_sap_indicate_disconnect_for_sta(hdd_adapter_t *adapter);
+void hdd_sap_destroy_timers(hdd_adapter_t *adapter);
+
 #endif    // end #if !defined( WLAN_HDD_HOSTAPD_H )

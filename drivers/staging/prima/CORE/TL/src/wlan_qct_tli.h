@@ -479,6 +479,7 @@ typedef struct
   WLANTL_REORDER_BUFFER_T     *reorderBuffer;
 
   v_U16_t            LastSN;
+  bool               set_data_filter;
 }WLANTL_BAReorderType;
 
 

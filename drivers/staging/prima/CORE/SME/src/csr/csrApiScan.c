@@ -6361,6 +6361,9 @@ eHalStatus csrScanCopyRequest(tpAniSirGlobal pMac, tCsrScanRequest *pDstReq, tCs
                             }
                         }
                       }
+                        else
+                            csrValidateScanChannels(pMac, pDstReq, pSrcReq,
+                                                    &new_index, ch144_support);
                         pDstReq->ChannelInfo.numOfChannels = new_index;
 #ifdef FEATURE_WLAN_LFR
                         if ( ( ( eCSR_SCAN_HO_BG_SCAN == pSrcReq->requestType ) ||
@@ -8774,3 +8777,62 @@ void UpdateCCKMTSF(tANI_U32 *timeStamp0, tANI_U32 *timeStamp1, tANI_U32 *incr)
     *timeStamp1 = (tANI_U32)((timeStamp64 >> 32) & 0xffffffff);
 }
 #endif
+
+void csrValidateScanChannels(tpAniSirGlobal pMac, tCsrScanRequest *pDstReq,
+        tCsrScanRequest *pSrcReq, tANI_U32 *new_index, tANI_U8 ch144_support)
+{
+
+    int index;
+    for ( index = 0; index < pSrcReq->ChannelInfo.
+            numOfChannels ; index++ )
+    {
+        /* Skip CH 144 if firmware support not present */
+        if (pSrcReq->ChannelInfo.ChannelList[index] == 144 && !ch144_support)
+            continue;
+
+        /* Allow scan on valid channels only.
+         */
+        if ( ( csrRoamIsValidChannel(pMac,
+                        pSrcReq->ChannelInfo.ChannelList[index]) ) )
+        {
+            if( ((pSrcReq->skipDfsChnlInP2pSearch ||
+                            (pMac->scan.fEnableDFSChnlScan ==
+                             DFS_CHNL_SCAN_DISABLED)) &&
+                        (NV_CHANNEL_DFS == vos_nv_getChannelEnabledState(
+                              pSrcReq->ChannelInfo.ChannelList[index])) &&
+                        (pSrcReq->ChannelInfo.numOfChannels > 1))
+#ifdef FEATURE_WLAN_LFR
+                    /*
+                     * If LFR is requesting a contiguous scan
+                     * (i.e. numOfChannels > 1), then ignore
+                     * DFS channels.
+                     * TODO: vos_nv_getChannelEnabledState is returning
+                     * 120, 124 and 128 as non-DFS channels. Hence, the
+                     * use of direct check for channels below.
+                     */
+                    || ((eCSR_SCAN_HO_BG_SCAN == pSrcReq->requestType) &&
+                        (pSrcReq->ChannelInfo.numOfChannels > 1) &&
+                        (CSR_IS_CHANNEL_DFS(
+                            pSrcReq->ChannelInfo.ChannelList[index])) &&
+                        !pMac->roam.configParam.allowDFSChannelRoam)
+#endif
+                        )
+                        {
+#ifdef FEATURE_WLAN_LFR
+                            smsLog(pMac, LOG1,
+                                  FL(" reqType=%s (%d), numOfChannels=%d,"
+                                      " ignoring DFS channel:%d"),
+                                  sme_requestTypetoString(pSrcReq->requestType),
+                                  pSrcReq->requestType,
+                                  pSrcReq->ChannelInfo.numOfChannels,
+                                  pSrcReq->ChannelInfo.ChannelList[index]);
+#endif
+                            continue;
+                        }
+
+            pDstReq->ChannelInfo.ChannelList[*new_index] =
+                pSrcReq->ChannelInfo.ChannelList[index];
+            (*new_index)++;
+        }
+    }
+}
