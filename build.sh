@@ -18,7 +18,7 @@ export SUBARCH=arm
 export KBUILD_BUILD_USER="WilliamZambrano"
 export KBUILD_BUILD_HOST="AMDfx6300"
 
-make harpia_defconfig
+make merlin_defconfig
 make menuconfig
 echo -e "$yellow*****************************************************"
 echo "       Compilando Evolution_Kernel         "
